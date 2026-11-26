@@ -4734,6 +4734,7 @@ public import Mathlib.FieldTheory.Galois.Infinite
 public import Mathlib.FieldTheory.Galois.IsGaloisGroup
 public import Mathlib.FieldTheory.Galois.NormalBasis
 public import Mathlib.FieldTheory.Galois.Notation
+public import Mathlib.FieldTheory.Galois.PrimeDegree
 public import Mathlib.FieldTheory.Galois.Profinite
 public import Mathlib.FieldTheory.Galois.Sylow
 public import Mathlib.FieldTheory.IntermediateField.Adjoin.Algebra
