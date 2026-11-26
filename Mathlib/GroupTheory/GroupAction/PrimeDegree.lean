@@ -6,13 +6,16 @@ Authors: Ishan Singh
 module
 
 public import Mathlib.Data.Nat.Prime.Defs
+public import Mathlib.Data.ZMod.Defs
 public import Mathlib.GroupTheory.GroupAction.Basic
 public import Mathlib.GroupTheory.Solvable
 public import Mathlib.SetTheory.Cardinal.Finite
 
+import Mathlib.Algebra.Field.ZMod
 import Mathlib.GroupTheory.GroupAction.Primitive
 import Mathlib.GroupTheory.SpecificGroups.Cyclic
 import Mathlib.GroupTheory.Sylow
+import Mathlib.Tactic.LinearCombination
 
 /-!
 # Solvable transitive groups of prime degree
@@ -26,6 +29,9 @@ number `p`. This file proves Galois's criterion for the solvability of `G`.
   it has a normal subgroup of order `p`.
 * `MulAction.isSolvable_iff_forall_subsingleton_fixedBy_of_prime_card`, **Galois's criterion**:
   `G` is solvable if and only if no element of `G` other than `1` fixes two distinct points.
+* `MulAction.isSolvable_iff_exists_equiv_zmod_of_prime_card`: `G` is solvable if and only if the
+  points can be labelled by `ZMod p` so that every element of `G` acts as an affine map
+  `k ↦ a * k + b`.
 
 ## Implementation notes
 
@@ -225,5 +231,84 @@ theorem isSolvable_iff_forall_subsingleton_fixedBy_of_prime_card (hp : (Nat.card
   exact ⟨fun ⟨N, _, hN⟩ g hg x hx y hy ↦
       by_contra fun hxy ↦ hg (eq_one_of_smul_eq_of_smul_eq hp N hN hxy hx hy),
     exists_normal_card_eq_of_forall_subsingleton_fixedBy hp⟩
+
+/-! ### The affine form of the criterion -/
+
+omit [FaithfulSMul G X] [IsPretransitive G X] in
+/-- If `n ≠ 1` is an element of a subgroup `N` of order `p` acting freely on a set `X` with `p`
+elements, then `k ↦ n ^ k • x` is a bijection from `ZMod p` to `X`. -/
+private theorem bijective_pow_val_smul (hp : (Nat.card X).Prime) (N : Subgroup G)
+    [IsCancelSMul N X] (hcard : Nat.card N = Nat.card X) {n : N} (hn : n ≠ 1) (x : X) :
+    Function.Bijective fun k : ZMod (Nat.card X) ↦ n ^ k.val • x := by
+  have : Fact (Nat.card X).Prime := ⟨hp⟩
+  have : Finite X := Nat.finite_of_card_ne_zero hp.ne_zero
+  refine (Nat.bijective_iff_injective_and_card _).mpr ⟨fun k l hkl ↦ ?_, Nat.card_zmod _⟩
+  have h := IsCancelSMul.right_cancel _ _ _ hkl
+  rw [pow_inj_mod, orderOf_eq_prime (hcard ▸ pow_card_eq_one') hn,
+    Nat.mod_eq_of_lt (ZMod.val_lt k), Nat.mod_eq_of_lt (ZMod.val_lt l)] at h
+  exact ZMod.val_injective _ h
+
+/-- A transitive group of prime degree `p` with a normal subgroup of order `p` acts by affine
+maps of `ZMod p`, for a suitable labelling of the points. -/
+private theorem exists_equiv_zmod_of_normal_of_card_eq (hp : (Nat.card X).Prime)
+    (N : Subgroup G) [hN : N.Normal] (hcard : Nat.card N = Nat.card X) :
+    ∃ e : X ≃ ZMod (Nat.card X), ∀ g : G, ∃ a b : ZMod (Nat.card X),
+      ∀ x, e (g • x) = a * e x + b := by
+  have : Fact (Nat.card X).Prime := ⟨hp⟩
+  have : IsCyclic N := isCyclic_of_prime_card hcard
+  have := isPretransitive_of_normal_of_card_eq hp N hcard
+  have := isCancelSMul_of_isMulCommutative N (X := X)
+  have : Finite N := Nat.finite_of_card_ne_zero (hcard ▸ hp.ne_zero)
+  have : Nontrivial N := Finite.one_lt_card_iff_nontrivial.mp (hcard ▸ hp.one_lt)
+  obtain ⟨x₀⟩ : Nonempty X := (Nat.card_pos_iff.mp hp.pos).1
+  obtain ⟨n, hn⟩ := exists_ne (1 : N)
+  -- label the points by the exponents of `n`
+  let f : ZMod (Nat.card X) → X := fun k ↦ n ^ k.val • x₀
+  have hf : Function.Bijective f := bijective_pow_val_smul hp N hcard hn x₀
+  have hf_nat (j : ℕ) : f j = n ^ j • x₀ := by
+    dsimp only [f]
+    rw [ZMod.val_natCast, ← hcard, pow_mod_natCard]
+  refine ⟨(Equiv.ofBijective f hf).symm, fun g ↦ ?_⟩
+  -- `g * n * g⁻¹ = n ^ a` and `g • x₀ = n ^ b • x₀`, hence `g • n ^ k • x₀ = n ^ (a * k + b) • x₀`
+  obtain ⟨a, ha⟩ := (Submonoid.mem_powers_iff _ _).mp
+    (mem_powers_of_prime_card (g' := (⟨g * n * g⁻¹, hN.conj_mem n n.property g⟩ : N)) hcard hn)
+  obtain ⟨m, hm⟩ := exists_smul_eq N x₀ (g • x₀)
+  obtain ⟨b, rfl⟩ := (Submonoid.mem_powers_iff _ _).mp
+    (mem_powers_of_prime_card (g' := m) hcard hn)
+  refine ⟨a, b, fun x ↦ ?_⟩
+  obtain ⟨k, rfl⟩ := hf.surjective x
+  rw [Equiv.symm_apply_eq, Equiv.ofBijective_symm_apply_apply, Equiv.ofBijective_apply]
+  have : (a * k + b : ZMod (Nat.card X)) = ((a * k.val + b : ℕ) : ZMod (Nat.card X)) := by
+    simp
+  rw [this, hf_nat, pow_add, mul_smul, hm, pow_mul, ha]
+  simp [f, Subgroup.smul_def, conj_pow, mul_smul]
+
+/-- A group acting faithfully and transitively on a set `X` of prime cardinality `p` is solvable
+if and only if the points of `X` can be labelled by `ZMod p` in such a way that every element of
+the group acts as an affine map `k ↦ a * k + b` (where necessarily `a ≠ 0`). -/
+theorem isSolvable_iff_exists_equiv_zmod_of_prime_card {p : ℕ} [Fact p.Prime]
+    (hX : Nat.card X = p) :
+    Group.IsSolvable G ↔
+      ∃ e : X ≃ ZMod p, ∀ g : G, ∃ a b : ZMod p, ∀ x, e (g • x) = a * e x + b := by
+  subst hX
+  have hp : (Nat.card X).Prime := Fact.out
+  refine ⟨fun _ ↦ ?_, fun ⟨e, he⟩ ↦ ?_⟩
+  · obtain ⟨N, _, hN⟩ := exists_normal_card_eq_of_isSolvable (G := G) hp
+    exact exists_equiv_zmod_of_normal_of_card_eq hp N hN
+  · refine (isSolvable_iff_forall_subsingleton_fixedBy_of_prime_card hp).mpr
+      fun g hg x hx y hy ↦ by_contra fun hxy ↦ hg ?_
+    obtain ⟨a, b, hab⟩ := he g
+    have h1 := hab x
+    have h2 := hab y
+    rw [mem_fixedBy.mp hx] at h1
+    rw [mem_fixedBy.mp hy] at h2
+    -- an affine map `k ↦ a * k + b` with two fixed points is the identity
+    have ha : a = 1 := by
+      have : (a - 1) * (e x - e y) = 0 := by linear_combination h2 - h1
+      exact sub_eq_zero.mp
+        ((mul_eq_zero.mp this).resolve_right (sub_ne_zero.mpr (e.injective.ne hxy)))
+    have hb : b = 0 := by simpa [ha] using h1
+    refine FaithfulSMul.eq_of_smul_eq_smul (α := X) fun z ↦ e.injective ?_
+    rw [hab, ha, hb, one_mul, add_zero, one_smul]
 
 end MulAction
