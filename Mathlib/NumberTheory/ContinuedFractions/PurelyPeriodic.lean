@@ -19,7 +19,8 @@ Let `v` be an element of a linear ordered field `K` with a floor function, for e
 number, and assume that `v` is a quadratic irrational, that is, that the minimal polynomial of `v`
 over `ℚ` has degree `2`. This polynomial has a second root `w` in `K`, the conjugate of `v`. We
 prove **Galois' theorem**: the continued fraction of `v` is purely periodic if and only if `v` is
-reduced, that is, `1 < v` and `-1 < w < 0`.
+reduced, that is, `1 < v` and `-1 < w < 0`. In this case the continued fraction of `-1 / w` is
+purely periodic as well, and its period is the period of `v` in reversed order.
 
 ## Main results
 
@@ -28,6 +29,10 @@ reduced, that is, `1 < v` and `-1 < w < 0`.
 - `GenContFract.of_isPurelyPeriodic_iff_of_natDegree_minpoly_eq_two`: the continued fraction of a
   quadratic irrational `v` is purely periodic if and only if `1 < v` and `v` has a conjugate
   between `-1` and `0`.
+- `GenContFract.floor_completeQuotient_neg_inv_of_isConjRoot`: if `v = [a₀; a₁, …, aₚ₋₁, a₀, …]`
+  is purely periodic, then `-1 / w = [aₚ₋₁; aₚ₋₂, …, a₀, aₚ₋₁, …]`.
+- `GenContFract.IsPurelyPeriodic.neg_inv_of_isConjRoot`: if the continued fraction of `v` is
+  purely periodic, then so is the continued fraction of `-1 / w`.
 
 ## Implementation notes
 
@@ -47,6 +52,9 @@ Conversely, let `v = vₚ` with `p > 0`, so that `1 < vₙ` for all `n`. If `0 �
 `⌊wₙ⌋ = ⌊vₙ⌋` for all `n`, which means that `w` and `v` have the same continued fraction and
 contradicts `v ≠ w`. Hence `wₙ < 0` for some `n`, so that `-1 < wₘ < 0` for all `m > n`, and
 `w = wₘ` when `m` is a multiple of `p`.
+
+Finally, if `-1 < wₙ < 0`, then `-1 / wₙ₊₁ = ⌊vₙ⌋ + 1 / (-1 / wₙ)` with `1 < -1 / wₙ`, so that
+`-1 / wₙ` is the first complete quotient of `-1 / wₙ₊₁`. This gives the reversed period.
 
 ## References
 
@@ -207,5 +215,69 @@ theorem of_isPurelyPeriodic_iff_of_natDegree_minpoly_eq_two (h : (minpoly ℚ v)
   obtain ⟨w, hvw, hw⟩ := exists_ne_and_isConjRoot h
   obtain ⟨hv₁, hw₁⟩ := (of_isPurelyPeriodic_iff_of_isConjRoot h hw hvw).mp hv
   exact ⟨hv₁, w, hw₁, hw⟩
+
+/-! ### The reversed period -/
+
+/-- If `-1 < c n < 0`, then the first complete quotient of `-1 / c (n + 1)` is `-1 / c n`. -/
+private theorem inv_fract_neg_inv_succ (hc : ∀ n, c (n + 1) = (c n - ⌊completeQuotient v n⌋)⁻¹)
+    {n : ℕ} (hn : c n ∈ Set.Ioo (-1) 0) : (fract (-(c (n + 1))⁻¹))⁻¹ = -(c n)⁻¹ := by
+  rw [fract, floor_neg_inv_succ hc hn, hc, inv_inv, neg_sub, sub_sub_cancel_left, inv_neg]
+
+/-- If `-1 < c n < 0` for all `n`, then the `k`-th complete quotient of `-1 / c (m + k)` is
+`-1 / c m`. -/
+private theorem completeQuotient_neg_inv_add
+    (hc : ∀ n, c (n + 1) = (c n - ⌊completeQuotient v n⌋)⁻¹) (hc₁ : ∀ n, c n ∈ Set.Ioo (-1) 0)
+    (m k : ℕ) : completeQuotient (-(c (m + k))⁻¹) k = -(c m)⁻¹ := by
+  induction k with
+  | zero => rfl
+  | succ k ih => rw [← add_assoc, completeQuotient_succ', inv_fract_neg_inv_succ hc (hc₁ _), ih]
+
+/-- If `v` is a quadratic irrational with conjugate `w` and `v` is equal to its complete quotient
+`vₚ₊₁`, then the conjugates of all complete quotients of `v` lie between `-1` and `0`. -/
+private theorem exists_conj_completeQuotient_mem_Ioo (h : (minpoly ℚ v).natDegree = 2)
+    (hw : IsConjRoot ℚ v w) (hvw : v ≠ w) {p : ℕ} (hp : completeQuotient v (p + 1) = v) :
+    ∃ c : ℕ → K, c 0 = w ∧ (∀ n, c (n + 1) = (c n - ⌊completeQuotient v n⌋)⁻¹) ∧
+      (∀ m n, completeQuotient v m = completeQuotient v n → c m = c n) ∧
+      ∀ n, c n ∈ Set.Ioo (-1) 0 := by
+  have hv := (of_isEventuallyPeriodic_of_natDegree_minpoly_eq_two h).not_terminates
+  obtain ⟨hv₁, hw₁⟩ := (of_isPurelyPeriodic_iff_of_isConjRoot h hw hvw).mp
+    (of_isPurelyPeriodic_iff.mpr ⟨hv, p + 1, p.succ_pos, hp⟩)
+  obtain ⟨c, rfl, hc, hc'⟩ := exists_conj_completeQuotient h hw
+  exact ⟨c, rfl, hc, hc', mem_Ioo_of_mem_Ioo (one_lt_completeQuotient hv hv₁) hc hw₁⟩
+
+/-- Let `v` be a quadratic irrational with conjugate `w`. If `v` is equal to its `p`-th complete
+quotient, then `-1 / w` is equal to its `p`-th complete quotient. -/
+theorem completeQuotient_neg_inv_of_isConjRoot (h : (minpoly ℚ v).natDegree = 2)
+    (hw : IsConjRoot ℚ v w) (hvw : v ≠ w) {p : ℕ} (hp : completeQuotient v p = v) :
+    completeQuotient (-w⁻¹) p = -w⁻¹ := by
+  obtain _ | p := p
+  · rfl
+  obtain ⟨c, rfl, hc, hc', hc₁⟩ := exists_conj_completeQuotient_mem_Ioo h hw hvw hp
+  simpa only [zero_add, hc' _ 0 hp] using completeQuotient_neg_inv_add hc hc₁ 0 (p + 1)
+
+/-- **Galois' theorem** on the reversed period: let `v = [a₀; a₁, a₂, …]` be a quadratic
+irrational with conjugate `w` whose continued fraction is purely periodic with period `p`. Then
+the continued fraction of `-1 / w` is `[aₚ₋₁; aₚ₋₂, …, a₀, aₚ₋₁, …]`. That is, for `j + k + 1 = p`
+the integer part of the `k`-th complete quotient of `-1 / w` is the integer part of the `j`-th
+complete quotient of `v`. -/
+theorem floor_completeQuotient_neg_inv_of_isConjRoot (h : (minpoly ℚ v).natDegree = 2)
+    (hw : IsConjRoot ℚ v w) (hvw : v ≠ w) {j k : ℕ} (hp : completeQuotient v (j + k + 1) = v) :
+    ⌊completeQuotient (-w⁻¹) k⌋ = ⌊completeQuotient v j⌋ := by
+  obtain ⟨c, rfl, hc, hc', hc₁⟩ := exists_conj_completeQuotient_mem_Ioo h hw hvw hp
+  rw [← hc' _ 0 hp, add_right_comm, completeQuotient_neg_inv_add hc hc₁,
+    floor_neg_inv_succ hc (hc₁ j)]
+
+/-- If the continued fraction of `v` is purely periodic and `w` is the conjugate of `v`, then the
+continued fraction of `-1 / w` is purely periodic. -/
+theorem IsPurelyPeriodic.neg_inv_of_isConjRoot (hv : (of v).IsPurelyPeriodic)
+    (hw : IsConjRoot ℚ v w) (hvw : v ≠ w) : (of (-w⁻¹)).IsPurelyPeriodic := by
+  obtain ⟨-, p, hp, hvp⟩ := of_isPurelyPeriodic_iff.mp hv
+  refine of_isPurelyPeriodic_iff.mpr ⟨fun ht ↦ hvw ?_, p, hp,
+    completeQuotient_neg_inv_of_isConjRoot hv.isEventuallyPeriodic.natDegree_minpoly_eq_two hw hvw
+      hvp⟩
+  obtain ⟨q, hq⟩ := (terminates_iff_rat _).mp ht
+  obtain rfl : w = algebraMap ℚ K (-q⁻¹) := by
+    rw [eq_ratCast, Rat.cast_neg, Rat.cast_inv, ← hq, inv_neg, neg_neg, inv_inv]
+  exact hw.symm.eq_algebraMap
 
 end GenContFract
