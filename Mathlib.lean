@@ -6027,6 +6027,7 @@ public import Mathlib.NumberTheory.ClassNumber.AdmissibleCardPowDegree
 public import Mathlib.NumberTheory.ClassNumber.Finite
 public import Mathlib.NumberTheory.ClassNumber.FunctionField
 public import Mathlib.NumberTheory.ContinuedFractions.Lagrange
+public import Mathlib.NumberTheory.ContinuedFractions.PurelyPeriodic
 public import Mathlib.NumberTheory.ContinuedFractions.QuadraticIrrational
 public import Mathlib.NumberTheory.Cyclotomic.Basic
 public import Mathlib.NumberTheory.Cyclotomic.CyclotomicCharacter
