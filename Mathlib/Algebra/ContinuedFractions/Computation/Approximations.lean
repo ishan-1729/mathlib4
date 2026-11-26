@@ -311,6 +311,11 @@ theorem of_den_mono : (of v).dens n ≤ (of v).dens (n + 1) := by
         simpa using mul_le_mul_of_nonneg_right this zero_le_of_den
       _ ≤ g.dens (n + 1) := le_of_succ_get?_den nth_partDen_eq
 
+/-- Shows that all denominators are positive. -/
+theorem of_den_pos : 0 < (of v).dens n :=
+  (zero_lt_one.trans_eq zeroth_den_eq_one.symm).trans_le
+    (monotone_nat_of_le_succ (f := (of v).dens) (fun _ ↦ of_den_mono) n.zero_le)
+
 section ErrorTerm
 
 /-!

@@ -33,6 +33,7 @@ Moreover, we show the convergence of the continued fractions computations, that 
 - `GenContFract.of_convs_eq_convs'` shows that the convergents computations for
   `GenContFract.of` are equivalent.
 - `GenContFract.of_convergence` shows that `(GenContFract.of v).convs` converges to `v`.
+- `GenContFract.of_injective` shows that `v` is determined by `GenContFract.of v`.
 
 ## Tags
 
@@ -117,6 +118,18 @@ set_option backward.isDefEq.respectTransparency false in
 theorem of_convergence [TopologicalSpace K] [OrderTopology K] :
     Filter.Tendsto (of v).convs Filter.atTop <| 𝓝 v := by
   simpa [LinearOrderedAddCommGroup.tendsto_nhds, abs_sub_comm] using of_convergence_epsilon v
+
+/-- A value is determined by its continued fraction: `GenContFract.of` is injective. -/
+theorem of_injective : Function.Injective (of : K → GenContFract K) := by
+  intro v w h
+  by_contra hvw
+  have hε : 0 < |v - w| / 2 := half_pos (abs_pos.mpr (sub_ne_zero.mpr hvw))
+  obtain ⟨N, hN⟩ := of_convergence_epsilon v _ hε
+  obtain ⟨M, hM⟩ := of_convergence_epsilon w _ hε
+  have h₁ := hN (max N M) (le_max_left ..)
+  have h₂ := hM (max N M) (le_max_right ..)
+  rw [← h, abs_sub_comm] at h₂
+  linarith [abs_sub_le v ((of v).convs (max N M)) w]
 
 end Convergence
 
