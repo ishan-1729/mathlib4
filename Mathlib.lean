@@ -5036,6 +5036,7 @@ public import Mathlib.GroupTheory.GroupAction.MultipleTransitivity
 public import Mathlib.GroupTheory.GroupAction.OfQuotient
 public import Mathlib.GroupTheory.GroupAction.Period
 public import Mathlib.GroupTheory.GroupAction.Pointwise
+public import Mathlib.GroupTheory.GroupAction.PrimeDegree
 public import Mathlib.GroupTheory.GroupAction.Primitive
 public import Mathlib.GroupTheory.GroupAction.Quotient
 public import Mathlib.GroupTheory.GroupAction.Ring
