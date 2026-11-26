@@ -284,6 +284,7 @@ public import Mathlib.Algebra.ContinuedFractions.Basic
 public import Mathlib.Algebra.ContinuedFractions.Computation.ApproximationCorollaries
 public import Mathlib.Algebra.ContinuedFractions.Computation.Approximations
 public import Mathlib.Algebra.ContinuedFractions.Computation.Basic
+public import Mathlib.Algebra.ContinuedFractions.Computation.CompleteQuotient
 public import Mathlib.Algebra.ContinuedFractions.Computation.CorrectnessTerminating
 public import Mathlib.Algebra.ContinuedFractions.Computation.TerminatesIffRat
 public import Mathlib.Algebra.ContinuedFractions.Computation.Translations
